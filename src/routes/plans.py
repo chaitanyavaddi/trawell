@@ -45,20 +45,37 @@ def create_plan(
 
 @router.get('/plans/generate')
 def create_plan(request: Request, plan_id):
-   print(plan_id)
-   #1 Get record
-   result = db.table('travel_plans').select('*').eq('id', plan_id).execute()
-   
-   if result.data:
-    plan = generate_plan(str(result.data[0]))
+   user = get_loggedin_user(request)
+   if user:
+      result = db.table('travel_plans').select('*').eq('id', plan_id).execute()
+      
+      if result.data:
+       plan = generate_plan(str(result.data[0]))
 
-    result1 = db.table('travel_plans').update({
-        'ai_plan': plan
-        }).eq('id', plan_id).execute()
-    
-    if result1.data:
-       return JSONResponse(json.dumps(result1.data[0]))
+      result1 = db.table('travel_plans').update({
+         'ai_plan': plan
+         }).eq('id', plan_id).execute()
+      
+      if result1:
+         return templates.TemplateResponse("new_plan_edit.html", {
+               'request': request, 
+               'plan': result1.data[0]
+            })
     
    #2 Make GPT call to gerenate travel plan
 
    #3 Shoew HTML page prefilled with Plan
+
+
+
+@router.post('/plans/save')
+def save_plan(request: Request, plan_id = Form(...), planContent= Form(...)):
+
+   user = get_loggedin_user(request)
+   if user:
+      result = db.table('travel_plans').update({
+         'ai_plan': planContent
+      }).eq('id', plan_id).execute()
+
+      if result.data:
+         return RedirectResponse('/dashboard', status_code=302)
